@@ -33,6 +33,13 @@ abstract class ThemedActivity : AppCompatActivity {
 
         super.onCreate(savedInstanceState)
 
+        // Status/nav bar icon contrast: we use a transparent status bar over a
+        // light or near-black background, so bar icons must follow night mode.
+        androidx.core.view.WindowCompat.getInsetsController(window, window.decorView).apply {
+            isAppearanceLightStatusBars = !Theme.usingNightMode()
+            isAppearanceLightNavigationBars = !Theme.usingNightMode()
+        }
+
         uiMode = resources.configuration.uiMode
 
         if (Build.VERSION.SDK_INT >= 35) {

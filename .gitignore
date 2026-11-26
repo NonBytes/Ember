@@ -18,3 +18,9 @@ jniLibs/
 
 # submodules
 /external
+
+# Kotlin compiler session files
+.kotlin/
+
+# Local development handoff
+/HANDOFF.md

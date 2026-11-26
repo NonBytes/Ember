@@ -5,16 +5,21 @@
     android:id="@+id/content"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_margin="4dp"
-    app:cardElevation="2dp">
+    android:layout_marginHorizontal="10dp"
+    android:layout_marginVertical="6dp"
+    app:cardBackgroundColor="@android:color/transparent"
+    app:cardCornerRadius="24dp"
+    app:cardElevation="0dp"
+    app:strokeColor="@android:color/transparent"
+    app:strokeWidth="2dp">
 
     <LinearLayout
         android:id="@+id/content_lin"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:background="@drawable/bg_hero_card_small"
         android:focusable="true"
         android:orientation="vertical">
-
 
         <LinearLayout
             android:id="@+id/container"
@@ -28,20 +33,20 @@
                 android:layout_gravity="center_vertical"
                 android:layout_weight="1"
                 android:gravity="center_vertical"
-                android:paddingStart="12dp"
-                android:paddingTop="8dp"
-                android:paddingBottom="8dp">
+                android:paddingStart="20dp"
+                android:paddingTop="18dp"
+                android:paddingBottom="6dp">
 
                 <TextView
                     android:id="@+id/profile_name"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:textAppearance="?android:attr/textAppearanceSmall"
-                    android:textColor="?android:attr/textColorPrimary"
+                    android:textColor="#FFFFFFFF"
+                    android:textSize="18sp"
                     android:textStyle="bold"
                     tools:text="@string/profile_name" />
             </LinearLayout>
-
 
             <androidx.appcompat.widget.AppCompatImageView
                 android:id="@+id/subscription"
@@ -53,7 +58,8 @@
                 android:focusable="true"
                 android:padding="12dp"
                 android:visibility="gone"
-                app:srcCompat="@drawable/ic_file_cloud_queue" />
+                app:srcCompat="@drawable/ic_file_cloud_queue"
+                app:tint="#FFC7B8AE" />
 
             <androidx.appcompat.widget.AppCompatImageView
                 android:id="@+id/edit"
@@ -64,7 +70,8 @@
                 android:contentDescription="@string/edit"
                 android:focusable="true"
                 android:padding="12dp"
-                app:srcCompat="@drawable/ic_image_edit" />
+                app:srcCompat="@drawable/ic_image_edit"
+                app:tint="#FFC7B8AE" />
 
             <LinearLayout
                 android:id="@+id/share"
@@ -87,9 +94,9 @@
                         android:id="@+id/shareIcon"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        app:srcCompat="@drawable/ic_social_share" />
+                        app:srcCompat="@drawable/ic_social_share"
+                        app:tint="#FFC7B8AE" />
                 </LinearLayout>
-
 
             </LinearLayout>
         </LinearLayout>
@@ -99,12 +106,14 @@
             android:layout_height="wrap_content"
             android:gravity="bottom"
             android:orientation="horizontal"
-            android:paddingStart="12dp"
-            android:paddingEnd="8dp">
+            android:paddingStart="20dp"
+            android:paddingEnd="16dp"
+            android:paddingBottom="18dp">
 
             <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
+                android:layout_marginEnd="12dp"
                 android:layout_weight="1"
                 android:orientation="vertical">
 
@@ -112,22 +121,25 @@
                     android:id="@+id/profile_type"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
+                    android:lineSpacingExtra="2dp"
                     android:textAppearance="?android:attr/textAppearanceSmall"
-                    android:textColor="?attr/accentOrTextSecondary" />
+                    android:textColor="#FFB9A89E" />
 
                 <TextView
-                    android:layout_marginTop="4dp"
-                    android:layout_marginBottom="12dp"
                     android:id="@+id/route_outbound"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:background="@drawable/bg_chip_hero"
+                    android:paddingHorizontal="10dp"
+                    android:paddingVertical="3dp"
                     android:textAppearance="?android:attr/textAppearanceSmall"
-                    android:textColor="?attr/accentOrTextSecondary" />
+                    android:textColor="#FFFFFFFF"
+                    android:textStyle="bold" />
 
             </LinearLayout>
 
             <androidx.appcompat.widget.SwitchCompat
-                android:layout_marginBottom="2dp"
                 android:id="@+id/enable"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content" />

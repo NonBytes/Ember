@@ -1,7 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name" translatable="false">NekoBox</string>
-    <string name="app_name_long" translatable="false">NekoBox for Android</string>
+    <string name="app_name" translatable="false">Ember</string>
+    <string name="ember_no_network">No network</string>
+    <string name="ember_about_description">A sing-box-powered proxy client with traffic inspection tools. Built by NonBytes, based on NekoBox for Android.</string>
+    <string name="ember_maintainer">Maintained by</string>
+    <string name="ember_credits">Credits</string>
+    <string name="ember_base_credit">Base application by MatsuriDayo and contributors. Ember is an independent fork, licensed under GPLv3.</string>
+    <string name="home_hero_title" translatable="true">Your network,\nyour rules</string>
+    <string name="home_featured_label" translatable="true">Selected server</string>
+    <string name="menu" translatable="true">Menu</string>
+    <string name="app_name_long" translatable="false">Ember for Android</string>
     <string name="app_desc">The universal proxy toolchain for Android, written in Kotlin.</string>
     <string name="project">Project</string>
     <string name="github">Source code</string>

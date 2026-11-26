@@ -5,14 +5,18 @@
     android:id="@+id/content"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_marginHorizontal="8dp"
-    android:layout_marginVertical="4dp"
-    app:cardCornerRadius="16dp"
-    app:cardElevation="2dp">
+    android:layout_marginHorizontal="10dp"
+    android:layout_marginVertical="6dp"
+    app:cardBackgroundColor="@android:color/transparent"
+    app:cardCornerRadius="24dp"
+    app:cardElevation="0dp"
+    app:strokeColor="@android:color/transparent"
+    app:strokeWidth="2dp">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:background="@drawable/bg_hero_card_small"
         android:gravity="bottom"
         android:orientation="vertical">
 
@@ -22,7 +26,8 @@
             android:layout_height="wrap_content"
             android:indeterminate="true"
             android:visibility="gone"
-            app:indicatorColor="?selectedColorPrimary" />
+            app:indicatorColor="@color/brand_flame"
+            app:trackColor="#33FFFFFF" />
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -34,18 +39,19 @@
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:gravity="center_vertical"
-                android:paddingStart="15dp"
+                android:paddingStart="20dp"
                 android:paddingTop="15dp"
                 android:paddingEnd="8dp"
-                android:paddingBottom="12dp">
+                android:paddingBottom="8dp">
 
                 <TextView
                     android:id="@+id/group_name"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginEnd="8dp"
-                    android:textAppearance="?android:attr/textAppearanceMedium"
-                    android:textColor="?android:attr/textColorPrimary"
+                    android:textAppearance="?android:attr/textAppearanceSmall"
+                    android:textColor="#FFFFFFFF"
+                    android:textSize="18sp"
                     android:textStyle="bold"
                     tools:text="@string/group_name" />
 
@@ -54,7 +60,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:textAppearance="?android:attr/textAppearanceSmall"
-                    android:textColor="?android:attr/textColorSecondary"
+                    android:textColor="#FFB9A89E"
                     tools:text="user name" />
             </LinearLayout>
 
@@ -67,7 +73,8 @@
                 android:contentDescription="@string/edit"
                 android:focusable="true"
                 android:padding="12dp"
-                app:srcCompat="@drawable/ic_image_edit" />
+                app:srcCompat="@drawable/ic_image_edit"
+                app:tint="#FFC7B8AE" />
 
             <androidx.appcompat.widget.AppCompatImageView
                 android:id="@+id/options"
@@ -78,34 +85,34 @@
                 android:focusable="true"
                 android:nextFocusLeft="@+id/container"
                 android:padding="12dp"
-                app:srcCompat="@drawable/ic_baseline_more_vert_24" />
+                app:srcCompat="@drawable/ic_baseline_more_vert_24"
+                app:tint="#FFC7B8AE" />
 
         </LinearLayout>
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:layout_marginLeft="4dp"
-            android:layout_marginRight="4dp"
-            android:layout_marginBottom="4dp"
-            android:gravity="bottom">
+            android:gravity="center_vertical"
+            android:paddingStart="20dp"
+            android:paddingEnd="8dp"
+            android:paddingBottom="10dp">
 
             <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="8dp"
                 android:layout_weight="1"
                 android:gravity="bottom"
                 android:orientation="vertical"
-                android:paddingStart="12.5dp"
-                android:paddingTop="8dp">
+                android:paddingTop="4dp"
+                android:paddingBottom="4dp">
 
                 <TextView
                     android:id="@+id/group_traffic"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:textAppearance="?android:attr/textAppearanceSmall"
-                    android:textColor="?attr/accentOrTextSecondary"
+                    android:textColor="#FFB9A89E"
                     android:visibility="gone"
                     tools:text="@string/subscription_traffic" />
 
@@ -114,7 +121,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:textAppearance="?android:attr/textAppearanceSmall"
-                    android:textColor="?attr/accentOrTextSecondary"
+                    android:textColor="#FFB9A89E"
                     tools:text="@string/group_status_empty" />
 
             </LinearLayout>
@@ -124,9 +131,8 @@
                 style="?attr/borderlessButtonStyle"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginEnd="8dp"
                 android:text="@string/group_update"
-                android:textColor="?accentOrTextSecondary" />
+                android:textColor="@color/brand_flame" />
         </LinearLayout>
 
     </LinearLayout>

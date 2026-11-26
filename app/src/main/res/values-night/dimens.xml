@@ -1,0 +1,4 @@
+<resources>
+    <!-- Shadows are invisible on near-black surfaces; use the outline only. -->
+    <dimen name="profile_card_elevation">0dp</dimen>
+</resources>

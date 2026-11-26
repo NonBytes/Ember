@@ -129,7 +129,8 @@ object Theme {
     }
 
     fun applyNightTheme() {
-        AppCompatDelegate.setDefaultNightMode(getNightMode())
+        // Dark-only build: always night mode.
+        AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES)
     }
 
 }

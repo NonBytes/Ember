@@ -7,4 +7,14 @@
     <color name="stats_pill_bg">#FFE6E1E5</color>
     <color name="stats_pill_text">#FF1C1B1F</color>
     <color name="stats_pill_text_secondary">#CC1C1B1F</color>
+
+    <!-- Deep near-black app background (dark theme) -->
+    <color name="app_background">#FF0B0B0E</color>
+    <color name="surface_card">#FF1B1B20</color>
+
+    <!-- Brand flame accent: selected-card tint on dark -->
+    <color name="brand_100">#FF38211A</color>
+
+    <!-- Subtle card outline -->
+    <color name="card_stroke">#1FFFFFFF</color>
 </resources>

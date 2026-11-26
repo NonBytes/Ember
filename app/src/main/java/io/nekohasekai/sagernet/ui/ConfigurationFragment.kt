@@ -2,6 +2,12 @@ package io.nekohasekai.sagernet.ui
 
 import android.annotation.SuppressLint
 import android.content.Intent
+import android.net.ConnectivityManager
+import android.net.LinkProperties
+import android.net.Network
+import android.net.NetworkCapabilities
+import android.net.NetworkRequest
+import java.net.Inet4Address
 import android.graphics.Color
 import android.os.Bundle
 import android.os.SystemClock
@@ -132,7 +138,6 @@ class ConfigurationFragment @JvmOverloads constructor(
     lateinit var tabLayout: TabLayout
     lateinit var groupPager: ViewPager2
 
-    val alwaysShowAddress by lazy { DataStore.alwaysShowAddress }
 
     fun getCurrentGroupFragment(): GroupFragment? {
         return try {
@@ -141,6 +146,114 @@ class ConfigurationFragment @JvmOverloads constructor(
             Logs.e(e)
             null
         }
+    }
+
+    private val endpointNetworkCallback = object : ConnectivityManager.NetworkCallback() {
+        override fun onLinkPropertiesChanged(network: Network, properties: LinkProperties) {
+            activity?.runOnUiThread { refreshFeatured() }
+        }
+
+        override fun onLost(network: Network) {
+            activity?.runOnUiThread { refreshFeatured() }
+        }
+    }
+
+    private fun networkEndpoint(): String {
+        val connectivity = SagerNet.connectivity
+        val networks = listOfNotNull(SagerNet.underlyingNetwork) + connectivity.allNetworks.toList()
+        for (network in networks.distinct()) {
+            val capabilities = connectivity.getNetworkCapabilities(network) ?: continue
+            if (!capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) ||
+                !capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_VPN)) continue
+            val addresses = connectivity.getLinkProperties(network)?.linkAddresses
+                ?.map { it.address }
+                ?.filter { !it.isLoopbackAddress && !it.isLinkLocalAddress && !it.isAnyLocalAddress }
+                .orEmpty()
+            val address = addresses.firstOrNull { it is Inet4Address } ?: addresses.firstOrNull()
+                ?: continue
+            val ip = address.hostAddress ?: continue
+            val type = when {
+                capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) -> "Wi-Fi"
+                capabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) -> "Mobile"
+                capabilities.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET) -> "Ethernet"
+                else -> "Network"
+            }
+            return "$ip ($type)"
+        }
+        return getString(R.string.ember_no_network)
+    }
+
+    override fun onDestroyView() {
+        SagerNet.connectivity.unregisterNetworkCallback(endpointNetworkCallback)
+        super.onDestroyView()
+    }
+
+    /** Refresh the featured server card (selected profile + connection state). */
+    fun refreshFeatured() {
+        val view = view ?: return
+        val card = view.findViewById<View>(R.id.featured_card) ?: return
+        val nameView = view.findViewById<TextView>(R.id.featured_name)
+        val addressView = view.findViewById<TextView>(R.id.featured_address)
+        val typeView = view.findViewById<TextView>(R.id.featured_type)
+        val statusView = view.findViewById<TextView>(R.id.featured_status)
+        val cta = view.findViewById<TextView>(R.id.connect_cta)
+        val dot = view.findViewById<View>(R.id.featured_dot)
+
+        val state = DataStore.serviceState
+        statusView.setText(if (state.connected) R.string.vpn_connected else R.string.not_connected)
+        cta.setText(if (state.canStop) R.string.stop else R.string.connect)
+
+        // CTA: flame for Connect, muted warm gray for Stop.
+        androidx.core.view.ViewCompat.setBackgroundTintList(
+            cta, android.content.res.ColorStateList.valueOf(
+                if (state.canStop) 0xFF453832.toInt() else 0xFFFF3D1E.toInt()
+            )
+        )
+
+        // Status dot: green = connected, blinking flame = working, red = idle.
+        dot.clearAnimation()
+        val dotColor = when {
+            state.connected -> 0xFF4CAF50.toInt()
+            state.canStop -> 0xFFFF3D1E.toInt()
+            else -> 0xFFF44336.toInt()
+        }
+        androidx.core.view.ViewCompat.setBackgroundTintList(
+            dot, android.content.res.ColorStateList.valueOf(dotColor)
+        )
+        if (!state.connected && state.canStop) {
+            val blink = android.view.animation.AlphaAnimation(0.2f, 1f).apply {
+                duration = 600
+                repeatMode = android.view.animation.Animation.REVERSE
+                repeatCount = android.view.animation.Animation.INFINITE
+            }
+            dot.startAnimation(blink)
+        }
+
+        runOnDefaultDispatcher {
+            val profile = ProfileManager.getProfile(DataStore.selectedProxy)
+            onMainDispatcher {
+                card.isVisible = profile != null
+                if (profile != null) {
+                    nameView.text = profile.displayName()
+                    val destination = profile.displayAddress()
+                    addressView.text = "${networkEndpoint()} → $destination"
+                    addressView.isVisible = destination.isNotBlank()
+                    typeView.text = profile.displayType()
+                }
+            }
+        }
+    }
+
+    /** Live speed update from the service, shown inside the featured card. */
+    fun refreshSpeed(txRate: Long, rxRate: Long) {
+        val view = view ?: return
+        val ctx = view.context
+        view.findViewById<TextView>(R.id.featured_tx)?.text = "▲  " + ctx.getString(
+            R.string.speed, android.text.format.Formatter.formatFileSize(ctx, txRate)
+        )
+        view.findViewById<TextView>(R.id.featured_rx)?.text = "▼  " + ctx.getString(
+            R.string.speed, android.text.format.Formatter.formatFileSize(ctx, rxRate)
+        )
     }
 
     val updateSelectedCallback = object : ViewPager2.OnPageChangeCallback() {
@@ -204,6 +317,18 @@ class ConfigurationFragment @JvmOverloads constructor(
         adapter = GroupPagerAdapter()
         ProfileManager.addListener(adapter)
         GroupManager.addListener(adapter)
+
+        view.findViewById<View>(R.id.connect_cta)?.setOnClickListener {
+            (activity as? MainActivity)?.toggleConnection()
+        }
+        SagerNet.connectivity.registerNetworkCallback(
+            NetworkRequest.Builder()
+                .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+                .addCapability(NetworkCapabilities.NET_CAPABILITY_NOT_VPN)
+                .build(),
+            endpointNetworkCallback
+        )
+        refreshFeatured()
 
         groupPager.adapter = adapter
         groupPager.offscreenPageLimit = 2
@@ -330,26 +455,17 @@ class ConfigurationFragment @JvmOverloads constructor(
 
     private fun addPentestPreset(toolName: String, port: Int) {
         runOnDefaultDispatcher {
-            val reachable = try {
-                java.net.Socket().use {
-                    it.connect(java.net.InetSocketAddress("127.0.0.1", port), 300)
-                    true
-                }
-            } catch (_: Exception) {
-                false
-            }
-
-            import(listOf(HttpBean().apply {
+            val targetId = DataStore.selectedGroupForImport()
+            val profile = ProfileManager.createProfile(targetId, HttpBean().apply {
                 initializeDefaultValues()
                 name = toolName
                 serverAddress = "127.0.0.1"
                 serverPort = port
-            }))
+            })
 
             onMainDispatcher {
-                if (!reachable) {
-                    snackbar(getString(R.string.proxy_check_unreachable, port, toolName)).show()
-                }
+                DataStore.editingGroup = targetId
+                startActivity(profile.settingIntent(requireContext(), false))
             }
         }
     }
@@ -1512,7 +1628,6 @@ class ConfigurationFragment @JvmOverloads constructor(
             val profileStatus: TextView = view.findViewById(R.id.profile_status)
 
             val trafficText: TextView = view.findViewById(R.id.traffic_text)
-            val selectedView: LinearLayout = view.findViewById(R.id.selected_view)
             val editButton: ImageView = view.findViewById(R.id.edit)
             val shareLayout: LinearLayout = view.findViewById(R.id.share)
             val shareLayer: LinearLayout = view.findViewById(R.id.share_layer)
@@ -1537,13 +1652,12 @@ class ConfigurationFragment @JvmOverloads constructor(
                                 update = DataStore.selectedProxy != proxyEntity.id
                                 lastSelected = DataStore.selectedProxy
                                 DataStore.selectedProxy = proxyEntity.id
-                                onMainDispatcher {
-                                    selectedView.visibility = View.VISIBLE
-                                }
                             }
 
                             if (update) {
                                 ProfileManager.postUpdate(lastSelected)
+                                ProfileManager.postUpdate(proxyEntity.id)
+                                onMainDispatcher { pf.refreshFeatured() }
                                 if (DataStore.serviceState.canStop && reloadAccess.tryLock()) {
                                     SagerNet.reloadService()
                                     reloadAccess.unlock()
@@ -1582,15 +1696,7 @@ class ConfigurationFragment @JvmOverloads constructor(
                     )
                 }
 
-                var address = proxyEntity.displayAddress()
-                if (showTraffic && address.length >= 30) {
-                    address = address.substring(0, 27) + "..."
-                }
-
-                if (proxyEntity.requireBean().name.isBlank() || !pf.alwaysShowAddress) {
-                    address = ""
-                }
-
+                val address = proxyEntity.displayAddress()
                 profileAddress.text = address
                 (trafficText.parent as View).isGone =
                     (!showTraffic || proxyEntity.status <= 0) && address.isBlank()
@@ -1598,7 +1704,7 @@ class ConfigurationFragment @JvmOverloads constructor(
                 if (proxyEntity.status <= 0) {
                     if (showTraffic) {
                         profileStatus.text = trafficText.text
-                        profileStatus.setTextColor(requireContext().getColorAttr(android.R.attr.textColorSecondary))
+                        profileStatus.setTextColor(0xFFB9A89E.toInt())
                         trafficText.text = ""
                     } else {
                         profileStatus.text = ""
@@ -1656,7 +1762,16 @@ class ConfigurationFragment @JvmOverloads constructor(
                     onMainDispatcher {
                         editButton.isEnabled = !started
                         removeButton.isEnabled = !started
-                        selectedView.visibility = if (selected) View.VISIBLE else View.INVISIBLE
+                        // Flame outline + warmer gradient mark the active server.
+                        (view as? com.google.android.material.card.MaterialCardView)?.apply {
+                            strokeColor = if (selected) androidx.core.content.ContextCompat.getColor(
+                                view.context, R.color.brand_flame
+                            ) else android.graphics.Color.TRANSPARENT
+                            findViewById<android.view.View>(R.id.content_lin)?.setBackgroundResource(
+                                if (selected) R.drawable.bg_hero_card_selected
+                                else R.drawable.bg_hero_card_small
+                            )
+                        }
                     }
 
                     fun showShare(anchor: View) {
