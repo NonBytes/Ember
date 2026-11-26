@@ -290,6 +290,7 @@ class ConfigurationFragment @JvmOverloads constructor(
         super.onViewCreated(view, savedInstanceState)
 
         if (!select) {
+            toolbar.setSubtitle(R.string.ember_tagline)
             toolbar.inflateMenu(R.menu.add_profile_menu)
             toolbar.setOnMenuItemClickListener(this)
         } else {

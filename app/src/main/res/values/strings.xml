@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name" translatable="false">Ember</string>
+    <string name="ember_tagline" translatable="false">Use for free, Free to use.</string>
     <string name="ember_no_network">No network</string>
     <string name="ember_about_description">A sing-box-powered proxy client with traffic inspection tools. Built by NonBytes, based on NekoBox for Android.</string>
     <string name="ember_maintainer">Maintained by</string>
