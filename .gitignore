@@ -24,3 +24,7 @@ jniLibs/
 
 # Local development handoff
 /HANDOFF.md
+
+# Signing keystore — never commit this; keep it (and its passwords) outside git
+release.keystore
+release.keystore.*
