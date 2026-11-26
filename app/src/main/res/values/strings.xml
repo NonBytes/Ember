@@ -237,8 +237,15 @@
     <string name="traffic_log_export_empty">Nothing to export yet.</string>
     <string name="traffic_log_export_done">Exported %1$d connections.</string>
     <string name="cert_install_title">Install CA Certificate</string>
-    <string name="cert_install_summary">Launches Android\'s certificate installer, to trust your Burp/ZAP/mitmproxy CA for HTTPS interception.</string>
-    <string name="cert_install_failed">No certificate installer app found on this device.</string>
+    <string name="cert_install_summary">Download CA from your HTTP proxy or open Android\'s CA certificate settings for Burp/ZAP/mitmproxy.</string>
+    <string name="cert_install_failed">Could not open certificate settings on this device.</string>
+    <string name="cert_install_dialog_message">Android 11+ blocks apps from installing CA certificates directly.\n\nIn the next screen, tap:\nEncryption &amp; credentials → Install a certificate → CA certificate → Install anyway, then pick your .crt/.cer file in Downloads.</string>
+    <string name="cert_install_dialog_message_with_proxy">Android 11+ requires installing CA certificates from System Settings.\n\nEmber can auto-download the CA certificate from \"%1$s\" (%2$s:%3$d) into Downloads first, then open:\nEncryption &amp; credentials → Install a certificate → CA certificate → Install anyway.</string>
+    <string name="cert_install_fetch_and_open">Download CA &amp; Open Settings</string>
+    <string name="cert_install_open_settings">Open Settings</string>
+    <string name="cert_install_fetching">Downloading CA certificate from proxy…</string>
+    <string name="cert_install_saved">Saved Downloads/%1$s (%2$s)</string>
+    <string name="cert_install_fetch_failed">Could not auto-download CA from %1$s:%2$d — opening Settings so you can pick an existing file.</string>
     <string name="proxy_check_unreachable">Nothing is listening on 127.0.0.1:%1$d yet — start %2$s first or traffic won\'t route through it. Added anyway.</string>
     <string name="traffic_log_search_hint">Filter by host or process…</string>
     <string name="traffic_log_copy">Copy</string>

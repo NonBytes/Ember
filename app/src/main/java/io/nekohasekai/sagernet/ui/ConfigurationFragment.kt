@@ -184,6 +184,11 @@ class ConfigurationFragment @JvmOverloads constructor(
         return getString(R.string.ember_no_network)
     }
 
+    override fun onResume() {
+        super.onResume()
+        refreshFeatured()
+    }
+
     override fun onDestroyView() {
         testConnectionJob?.cancel()
         try {
@@ -336,6 +341,12 @@ class ConfigurationFragment @JvmOverloads constructor(
                     statusView.text = "$err — tap to retry"
                 }
             }
+        }
+
+        if (DataStore.proxyApps) {
+            val count = DataStore.individual.split('\n').count { it.isNotBlank() }
+            val modeLabel = if (DataStore.bypass) "Bypass" else "Proxy"
+            statusView.text = "${statusView.text} · $modeLabel $count app${if (count == 1) "" else "s"}"
         }
 
         runOnDefaultDispatcher {

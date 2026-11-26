@@ -19,8 +19,10 @@ import io.nekohasekai.sagernet.fmt.ssh.SSHBean
 import io.nekohasekai.sagernet.fmt.ssh.buildSingBoxOutboundSSHBean
 import io.nekohasekai.sagernet.fmt.tuic.TuicBean
 import io.nekohasekai.sagernet.fmt.tuic.buildSingBoxOutboundTuicBean
+import io.nekohasekai.sagernet.fmt.http.HttpBean
 import io.nekohasekai.sagernet.fmt.v2ray.StandardV2RayBean
 import io.nekohasekai.sagernet.fmt.v2ray.buildSingBoxOutboundStandardV2RayBean
+import io.nekohasekai.sagernet.fmt.v2ray.isTLS
 import io.nekohasekai.sagernet.fmt.wireguard.WireGuardBean
 import io.nekohasekai.sagernet.fmt.wireguard.buildSingBoxOutboundWireguardBean
 import io.nekohasekai.sagernet.ktx.isIpAddress
@@ -138,10 +140,12 @@ fun buildConfig(
         .mapNotNull { dns -> dns.trim().takeIf { it.isNotBlank() && !it.startsWith("#") } }
     val directDNS = DataStore.directDns.split("\n")
         .mapNotNull { dns -> dns.trim().takeIf { it.isNotBlank() && !it.startsWith("#") } }
+    val mainBean = proxy.resolveChain().firstOrNull()?.requireBean() ?: proxy.requireBean()
+    val isHttpInterceptionProxy = mainBean is HttpBean && !mainBean.isTLS()
     val enableDnsRouting = DataStore.enableDnsRouting
-    val useFakeDns = DataStore.enableFakeDns && !forTest
-    val needSniff = DataStore.trafficSniffing > 0
-    val needSniffOverride = DataStore.trafficSniffing == 2
+    val useFakeDns = (DataStore.enableFakeDns || isHttpInterceptionProxy) && !forTest
+    val needSniff = DataStore.trafficSniffing > 0 || isHttpInterceptionProxy
+    val needSniffOverride = DataStore.trafficSniffing == 2 || isHttpInterceptionProxy
     val externalIndexMap = ArrayList<IndexEntity>()
     val ipv6Mode = if (forTest) IPv6Mode.ENABLE else DataStore.ipv6Mode
 
@@ -240,6 +244,9 @@ fun buildConfig(
         // init routing object
         route = RouteOptions().apply {
             auto_detect_interface = true
+            if (!forTest && DataStore.enableClashAPI) {
+                find_process = true
+            }
             rules = mutableListOf()
             rule_set = mutableListOf()
         }
@@ -664,10 +671,12 @@ fun buildConfig(
         }
 
         remoteDns.firstOrNull().let {
-            // Always use direct DNS for urlTest
+            // Always use direct DNS for urlTest; also bypass plain HTTP interception proxies
+            // (Burp/mitmproxy/ZAP) whose MITM TLS certificates would break encrypted DoH.
             if (!forTest) dns.servers.add(DNSServerOptions().apply {
                 address = it ?: throw Exception("No remote DNS, check your settings!")
                 tag = "dns-remote"
+                if (isHttpInterceptionProxy) detour = TAG_DIRECT
                 address_resolver = "dns-direct"
                 strategy = autoDnsDomainStrategy(SingBoxOptionsUtil.domainStrategy(tag))
             })
@@ -685,6 +694,30 @@ fun buildConfig(
         if (forTest) {
             dns.rules = listOf()
         } else {
+            if (isHttpInterceptionProxy) {
+                // Plain HTTP CONNECT proxies cannot transport UDP; reject QUIC (UDP/443) and
+                // DoT (853) immediately so apps fall back to TCP/TLS 443 and standard DNS.
+                route.rules.add(0, Rule_DefaultOptions().apply {
+                    network = listOf("udp")
+                    port = listOf(443)
+                    action = "reject"
+                })
+                route.rules.add(0, Rule_DefaultOptions().apply {
+                    port = listOf(853)
+                    action = "reject"
+                })
+                // Avoid double-proxying (and port :8080 SNI override corruption) if the user
+                // also configured the same LAN proxy in Android's Wi-Fi HTTP proxy settings.
+                val proxyHost = mainBean.serverAddress
+                val proxyPort = mainBean.serverPort
+                if (proxyHost.isIpAddress() && proxyHost != LOCALHOST && proxyPort in 1..65535) {
+                    route.rules.add(0, Rule_DefaultOptions().apply {
+                        ip_cidr = listOf("$proxyHost/32")
+                        port = listOf(proxyPort)
+                        outbound = TAG_DIRECT
+                    })
+                }
+            }
             // built-in DNS rules
             route.rules.add(0, Rule_DefaultOptions().apply {
                 protocol = listOf("dns")
@@ -720,6 +753,13 @@ fun buildConfig(
                 })
                 dns.rules.add(DNSRule_DefaultOptions().apply {
                     inbound = listOf("tun-in")
+                    query_type = listOf("HTTPS", "SVCB")
+                    server = "dns-block"
+                    disable_cache = true
+                })
+                dns.rules.add(DNSRule_DefaultOptions().apply {
+                    inbound = listOf("tun-in")
+                    query_type = listOf("A", "AAAA")
                     server = "dns-fake"
                     disable_cache = true
                 })

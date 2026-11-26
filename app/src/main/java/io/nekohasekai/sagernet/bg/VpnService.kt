@@ -121,6 +121,18 @@ class VpnService : BaseVpnService(),
             if (ipv6Mode != IPv6Mode.DISABLE) {
                 builder.addRoute("::", 0)
             }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                data.proxy?.config?.trafficMap?.values?.flatten()?.forEach { ent ->
+                    val addr = ent.requireBean().serverAddress
+                    if (addr.isIpAddress() && addr != LOCALHOST) {
+                        runCatching {
+                            val inet = java.net.InetAddress.getByName(addr)
+                            val prefix = if (inet is java.net.Inet6Address) 128 else 32
+                            builder.excludeRoute(android.net.IpPrefix(inet, prefix))
+                        }
+                    }
+                }
+            }
         }
 
         updateUnderlyingNetwork(builder)

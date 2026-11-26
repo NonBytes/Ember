@@ -95,6 +95,7 @@ class AppManagerActivity : ThemedActivity() {
             if (isProxiedApp(item)) proxiedUids.delete(item.uid) else proxiedUids[item.uid] = true
             DataStore.individual = apps.filter { isProxiedApp(it) }
                 .joinToString("\n") { it.packageName }
+            appsDirty = true
 
             appsAdapter.notifyItemRangeChanged(0, appsAdapter.itemCount, SWITCH)
         }
@@ -217,6 +218,7 @@ class AppManagerActivity : ThemedActivity() {
 
         if (!DataStore.proxyApps) {
             DataStore.proxyApps = true
+            appsDirty = true
         }
 
         binding.bypassGroup.check(if (DataStore.bypass) R.id.appProxyModeBypass else R.id.appProxyModeOn)
@@ -224,11 +226,18 @@ class AppManagerActivity : ThemedActivity() {
             when (checkedId) {
                 R.id.appProxyModeDisable -> {
                     DataStore.proxyApps = false
+                    appsDirty = true
                     finish()
                 }
 
-                R.id.appProxyModeOn -> DataStore.bypass = false
-                R.id.appProxyModeBypass -> DataStore.bypass = true
+                R.id.appProxyModeOn -> {
+                    DataStore.bypass = false
+                    appsDirty = true
+                }
+                R.id.appProxyModeBypass -> {
+                    DataStore.bypass = true
+                    appsDirty = true
+                }
             }
         }
         binding.autoSelectProxyApps.setOnClickListener { selectProxyApp() }
@@ -255,6 +264,17 @@ class AppManagerActivity : ThemedActivity() {
     }
 
     private var sysApps = true
+    private var appsDirty = false
+
+    override fun onPause() {
+        super.onPause()
+        if (appsDirty) {
+            appsDirty = false
+            if (DataStore.serviceState.canStop) {
+                SagerNet.reloadService()
+            }
+        }
+    }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
         menuInflater.inflate(R.menu.per_app_proxy_menu, menu)
@@ -275,6 +295,7 @@ class AppManagerActivity : ThemedActivity() {
                     }
                     DataStore.individual = apps.filter { isProxiedApp(it) }
                         .joinToString("\n") { it.packageName }
+                    appsDirty = true
                     apps = apps.sortedWith(compareBy({ !isProxiedApp(it) }, { it.name.toString() }))
                     onMainDispatcher {
                         appsAdapter.filter.filter(binding.search.text?.toString() ?: "")
@@ -288,6 +309,7 @@ class AppManagerActivity : ThemedActivity() {
                 runOnDefaultDispatcher {
                     proxiedUids.clear()
                     DataStore.individual = ""
+                    appsDirty = true
                     apps = apps.sortedWith(compareBy({ !isProxiedApp(it) }, { it.name.toString() }))
                     onMainDispatcher {
                         appsAdapter.filter.filter(binding.search.text?.toString() ?: "")
@@ -319,6 +341,7 @@ class AppManagerActivity : ThemedActivity() {
                         ) to proxiedAppString.substring(i + 1)
                         binding.bypassGroup.check(if (enabled.toBoolean()) R.id.appProxyModeBypass else R.id.appProxyModeOn)
                         DataStore.individual = apps
+                        appsDirty = true
                         Snackbar.make(
                             binding.list, R.string.action_import_msg, Snackbar.LENGTH_LONG
                         ).show()
@@ -362,6 +385,7 @@ class AppManagerActivity : ThemedActivity() {
                     }
                     DataStore.individual =
                         apps.filter { isProxiedApp(it) }.joinToString("\n") { it.packageName }
+                    appsDirty = true
                     apps = apps.sortedWith(compareBy({ !isProxiedApp(it) }, { it.name.toString() }))
                     appsAdapter.filter.filter(binding.search.text?.toString() ?: "")
                 } catch (e: Exception) {

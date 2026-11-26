@@ -85,7 +85,7 @@ object DataStore : OnPreferenceDataStoreChangeListener {
     }
 
     var appTLSVersion by configurationStore.string(Key.APP_TLS_VERSION)
-    var enableClashAPI by configurationStore.boolean(Key.ENABLE_CLASH_API)
+    var enableClashAPI by configurationStore.boolean(Key.ENABLE_CLASH_API) { true }
     var autoExportTrafficLog by configurationStore.boolean(Key.AUTO_EXPORT_TRAFFIC_LOG)
     var showBottomBar by configurationStore.boolean(Key.SHOW_BOTTOM_BAR)
 
@@ -149,7 +149,7 @@ object DataStore : OnPreferenceDataStoreChangeListener {
 
     var meteredNetwork by configurationStore.boolean(Key.METERED_NETWORK)
     var proxyApps by configurationStore.boolean(Key.PROXY_APPS)
-    var bypass by configurationStore.boolean(Key.BYPASS_MODE) { true }
+    var bypass by configurationStore.boolean(Key.BYPASS_MODE) { false }
     var individual by configurationStore.string(Key.INDIVIDUAL)
     var showDirectSpeed by configurationStore.boolean(Key.SHOW_DIRECT_SPEED) { true }
 
