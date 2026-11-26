@@ -102,6 +102,7 @@ import io.nekohasekai.sagernet.widget.UndoSnackbarManager
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
@@ -184,11 +185,64 @@ class ConfigurationFragment @JvmOverloads constructor(
     }
 
     override fun onDestroyView() {
+        testConnectionJob?.cancel()
         try {
             SagerNet.connectivity.unregisterNetworkCallback(endpointNetworkCallback)
         } catch (_: Exception) {
         }
         super.onDestroyView()
+    }
+
+    private enum class ProxyTestStatus {
+        IDLE,
+        TESTING,
+        SUCCESS,
+        FAILED
+    }
+
+    private var proxyTestStatus = ProxyTestStatus.IDLE
+    private var lastTestedProxyId: Long = -1L
+    private var lastPingMs: Int = -1
+    private var lastTestError: String? = null
+    private var testConnectionJob: Job? = null
+
+    fun testProxyConnection(auto: Boolean = false) {
+        val act = activity as? MainActivity ?: return
+        if (!DataStore.serviceState.connected) return
+        if (proxyTestStatus == ProxyTestStatus.TESTING) return
+
+        testConnectionJob?.cancel()
+        proxyTestStatus = ProxyTestStatus.TESTING
+        refreshFeatured()
+
+        testConnectionJob = runOnDefaultDispatcher {
+            var retries = 6
+            while (act.connection.service == null && retries > 0) {
+                delay(250L)
+                retries--
+            }
+            delay(250L)
+            try {
+                val elapsed = act.urlTest()
+                lastPingMs = elapsed
+                lastTestError = null
+                proxyTestStatus = ProxyTestStatus.SUCCESS
+                onMainDispatcher {
+                    refreshFeatured()
+                    if (!auto) {
+                        act.snackbar(getString(R.string.connection_test_available, elapsed)).show()
+                    }
+                }
+            } catch (e: Exception) {
+                val err = Protocols.genFriendlyMsg(e.readableMessage)
+                lastTestError = err
+                proxyTestStatus = ProxyTestStatus.FAILED
+                onMainDispatcher {
+                    refreshFeatured()
+                    act.snackbar(getString(R.string.connection_test_error, err)).show()
+                }
+            }
+        }
     }
 
     /** Refresh the featured server card (selected profile + connection state). */
@@ -203,7 +257,6 @@ class ConfigurationFragment @JvmOverloads constructor(
         val dot = view.findViewById<View>(R.id.featured_dot)
 
         val state = DataStore.serviceState
-        statusView.setText(if (state.connected) R.string.vpn_connected else R.string.not_connected)
         cta.setText(if (state.canStop) R.string.stop else R.string.connect)
 
         // CTA: flame for Connect, muted warm gray for Stop.
@@ -213,23 +266,76 @@ class ConfigurationFragment @JvmOverloads constructor(
             )
         )
 
-        // Status dot: green = connected, blinking flame = working, red = idle.
         dot.clearAnimation()
-        val dotColor = when {
-            state.connected -> 0xFF4CAF50.toInt()
-            state.canStop -> 0xFFFF3D1E.toInt()
-            else -> 0xFFF44336.toInt()
-        }
-        androidx.core.view.ViewCompat.setBackgroundTintList(
-            dot, android.content.res.ColorStateList.valueOf(dotColor)
-        )
-        if (!state.connected && state.canStop) {
-            val blink = android.view.animation.AlphaAnimation(0.2f, 1f).apply {
-                duration = 600
-                repeatMode = android.view.animation.Animation.REVERSE
-                repeatCount = android.view.animation.Animation.INFINITE
+
+        if (!state.connected) {
+            testConnectionJob?.cancel()
+            proxyTestStatus = ProxyTestStatus.IDLE
+            lastTestError = null
+            lastTestedProxyId = -1L
+
+            statusView.setText(
+                when (state) {
+                    BaseService.State.Connecting -> R.string.connecting
+                    BaseService.State.Stopping -> R.string.stopping
+                    else -> R.string.not_connected
+                }
+            )
+
+            val dotColor = if (state.canStop) 0xFFFF3D1E.toInt() else 0xFFF44336.toInt()
+            androidx.core.view.ViewCompat.setBackgroundTintList(
+                dot, android.content.res.ColorStateList.valueOf(dotColor)
+            )
+            if (state.canStop) {
+                val blink = android.view.animation.AlphaAnimation(0.2f, 1f).apply {
+                    duration = 600
+                    repeatMode = android.view.animation.Animation.REVERSE
+                    repeatCount = android.view.animation.Animation.INFINITE
+                }
+                dot.startAnimation(blink)
             }
-            dot.startAnimation(blink)
+        } else {
+            // Local VPN is connected!
+            if (lastTestedProxyId != DataStore.selectedProxy) {
+                lastTestedProxyId = DataStore.selectedProxy
+                proxyTestStatus = ProxyTestStatus.IDLE
+                lastTestError = null
+            }
+
+            when (proxyTestStatus) {
+                ProxyTestStatus.IDLE -> {
+                    statusView.text = getString(R.string.connection_test_testing)
+                    androidx.core.view.ViewCompat.setBackgroundTintList(
+                        dot, android.content.res.ColorStateList.valueOf(0xFFFF9800.toInt())
+                    )
+                    testProxyConnection(auto = true)
+                }
+                ProxyTestStatus.TESTING -> {
+                    statusView.text = getString(R.string.connection_test_testing)
+                    androidx.core.view.ViewCompat.setBackgroundTintList(
+                        dot, android.content.res.ColorStateList.valueOf(0xFFFF9800.toInt())
+                    )
+                    val blink = android.view.animation.AlphaAnimation(0.2f, 1f).apply {
+                        duration = 400
+                        repeatMode = android.view.animation.Animation.REVERSE
+                        repeatCount = android.view.animation.Animation.INFINITE
+                    }
+                    dot.startAnimation(blink)
+                }
+                ProxyTestStatus.SUCCESS -> {
+                    androidx.core.view.ViewCompat.setBackgroundTintList(
+                        dot, android.content.res.ColorStateList.valueOf(0xFF4CAF50.toInt())
+                    )
+                    statusView.text = "Connected (${lastPingMs} ms)"
+                }
+                ProxyTestStatus.FAILED -> {
+                    androidx.core.view.ViewCompat.setBackgroundTintList(
+                        dot, android.content.res.ColorStateList.valueOf(0xFFF44336.toInt())
+                    )
+                    val err = lastTestError ?: getString(R.string.connection_test_fail)
+                    statusView.text = "$err — tap to retry"
+                }
+            }
         }
 
         runOnDefaultDispatcher {
@@ -325,6 +431,14 @@ class ConfigurationFragment @JvmOverloads constructor(
         view.findViewById<View>(R.id.connect_cta)?.setOnClickListener {
             (activity as? MainActivity)?.toggleConnection()
         }
+        val testClick: (View) -> Unit = {
+            if (DataStore.serviceState.connected) {
+                testProxyConnection(auto = false)
+            }
+        }
+        view.findViewById<View>(R.id.featured_card)?.setOnClickListener(testClick)
+        view.findViewById<View>(R.id.featured_status)?.setOnClickListener(testClick)
+        view.findViewById<View>(R.id.featured_dot)?.setOnClickListener(testClick)
         try {
             SagerNet.connectivity.registerNetworkCallback(
                 NetworkRequest.Builder()
