@@ -184,7 +184,10 @@ class ConfigurationFragment @JvmOverloads constructor(
     }
 
     override fun onDestroyView() {
-        SagerNet.connectivity.unregisterNetworkCallback(endpointNetworkCallback)
+        try {
+            SagerNet.connectivity.unregisterNetworkCallback(endpointNetworkCallback)
+        } catch (_: Exception) {
+        }
         super.onDestroyView()
     }
 
@@ -322,13 +325,16 @@ class ConfigurationFragment @JvmOverloads constructor(
         view.findViewById<View>(R.id.connect_cta)?.setOnClickListener {
             (activity as? MainActivity)?.toggleConnection()
         }
-        SagerNet.connectivity.registerNetworkCallback(
-            NetworkRequest.Builder()
-                .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
-                .addCapability(NetworkCapabilities.NET_CAPABILITY_NOT_VPN)
-                .build(),
-            endpointNetworkCallback
-        )
+        try {
+            SagerNet.connectivity.registerNetworkCallback(
+                NetworkRequest.Builder()
+                    .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+                    .addCapability(NetworkCapabilities.NET_CAPABILITY_NOT_VPN)
+                    .build(),
+                endpointNetworkCallback
+            )
+        } catch (_: Exception) {
+        }
         refreshFeatured()
 
         groupPager.adapter = adapter
